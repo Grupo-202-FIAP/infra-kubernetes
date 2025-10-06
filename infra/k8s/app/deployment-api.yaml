@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastfood-app
+  labels:
+    app: fastfood
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastfood
+  template:
+    metadata:
+      labels:
+        app: fastfood
+    spec:
+      containers:
+        - name: fastfood-api
+          image: foodway/backend-fiap:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: dev
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: DB_URL
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: DB_PASS
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: ACCESS_TOKEN
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: CLIENT_SECRET
+            - name: NOTIFY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: NOTIFY_URL
+            - name: PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: PUBLIC_KEY
+            - name: USER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: USER_ID
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: WEBHOOK_SECRET
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
