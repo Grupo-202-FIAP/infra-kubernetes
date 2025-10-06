@@ -11,11 +11,11 @@ on:
       deployment:
         description: "Deployment Kubernetes a atualizar"
         required: true
-        default: "nexTime-api"
+        default: "fastfood-app"
       container:
-        description: "Container (nome do container dentro do pod) a atualizar"
+        description: "Container (nome do container dentro do pod)"
         required: true
-        default: "nexTime-container"
+        default: "fastfood-api"
       namespace:
         description: "Namespace Kubernetes"
         required: true
