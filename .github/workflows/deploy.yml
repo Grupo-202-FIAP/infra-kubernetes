@@ -89,6 +89,11 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
+      - name: Aplicar Manifestos Kubernetes
+        run: |
+          echo "Aplicando todos os manifestos em infra/k8s..."
+          kubectl apply -R -f ./infra/k8s/
+
       - name: Deploy no Kubernetes
         env:
           K8S_IMAGE: ${{ github.event.inputs.image }}
