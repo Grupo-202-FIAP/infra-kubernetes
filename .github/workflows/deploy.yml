@@ -31,6 +31,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Debug - Verificar se Secrets não estão vazios
+        run: |
+          echo "Access Key ID está presente: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "Secret Access Key está presente: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "Session Token está presente: ${{ secrets.AWS_SESSION_TOKEN != '' }}"
+          echo "Region está presente: ${{ secrets.AWS_REGION != '' }}"
+
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -66,13 +73,6 @@ jobs:
     steps:
       - name: Checkout Infra Repo
         uses: actions/checkout@v4
-
-      - name: Debug - Verificar se Secrets não estão vazios
-        run: |
-          echo "Access Key ID está presente: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
-          echo "Secret Access Key está presente: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
-          echo "Session Token está presente: ${{ secrets.AWS_SESSION_TOKEN != '' }}"
-          echo "Region está presente: ${{ secrets.AWS_SECRET_REGION != '' }}"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
