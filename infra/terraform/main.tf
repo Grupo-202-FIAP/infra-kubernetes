@@ -7,7 +7,7 @@ module "eks" {
   cluster_version   = var.cluster_version
   cluster_role_arn  = var.cluster_role_arn
 
-  subnet_ids               = data.terraform_remote_state.network.outputs.private_subnet_ids
+  subnet_ids               = data.terraform_remote_state.network.outputs.public_subnet_ids
 
   endpoint_private_access       = var.endpoint_private_access
   endpoint_public_access        = var.endpoint_public_access
