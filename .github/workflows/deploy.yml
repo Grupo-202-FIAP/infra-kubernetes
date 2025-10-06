@@ -36,7 +36,8 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_SECRET_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init
@@ -66,19 +67,27 @@ jobs:
       - name: Checkout Infra Repo
         uses: actions/checkout@v4
 
+      - name: Debug - Verificar se Secrets não estão vazios
+        run: |
+          echo "Access Key ID está presente: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "Secret Access Key está presente: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "Session Token está presente: ${{ secrets.AWS_SESSION_TOKEN != '' }}"
+          echo "Region está presente: ${{ secrets.AWS_SECRET_REGION != '' }}"
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_SECRET_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Instalar kubectl e Configurar Acesso ao EKS
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
-          aws eks update-kubeconfig --region ${{ secrets.AWS_SECRET_REGION }} --name nexTime-cluster
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
       - name: Deploy no Kubernetes
         env:
