@@ -69,6 +69,10 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
     needs: terraform
     steps:
       - name: Checkout Infra Repo
@@ -89,35 +93,15 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
-      - name: Instalar Helm
+      - name: Show env (somente debug)
         run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          echo "DB_URL is $DB_URL"
+          echo "DB_USER is $DB_USER"
+          # NÃO mostre DB_PASS em logs reais
+          echo "DB_PASS length: ${#DB_PASS}"
 
-      - name: Instalar Secrets Store CSI Driver e AWS Provider via Helm
-        run: |
-          echo "Adicionando repositórios Helm"
-          helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
-          helm repo add aws-secrets-manager https://aws.github.io/secrets-store-csi-driver-provider-aws
-          helm repo update
-
-          echo "Instalando Secrets Store CSI Driver"
-          helm upgrade --install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
-            --namespace kube-system --create-namespace
-
-          echo "Instalando AWS Provider do Secrets Store CSI Driver"
-          helm upgrade --install aws-provider aws-secrets-manager/secrets-store-csi-driver-provider-aws \
-            --namespace kube-system --set secrets-store-csi-driver.install=false
-
-          echo "Aguardando os CRDs do Secrets Store CSI Driver..."
-          kubectl wait --for condition=established crd/secretproviderclasses.secrets-store.csi.x-k8s.io --timeout=90s
-
-          echo "Instalação do CSI Driver e AWS Provider concluída."
-
-
-      - name: Aplicar Manifestos Kubernetes
-        run: |
-          echo "Aplicando todos os manifestos em infra/k8s..."
-          kubectl apply -R -f ./infra/k8s/
+      - name: Substituir variáveis no secret
+        run: envsubst < k8s/app/secret.yaml | kubectl apply -f -
 
       - name: Deploy no Kubernetes
         env:
