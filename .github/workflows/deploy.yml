@@ -101,7 +101,7 @@ jobs:
           echo "DB_PASS length: ${#DB_PASS}"
 
       - name: Substituir variáveis no secret
-        run: envsubst < k8s/app/secret.yaml | kubectl apply -f -
+        run: envsubst < k8s/app/secrets/secret.yaml | kubectl apply -f -
 
       - name: Deploy no Kubernetes
         env:
