@@ -89,6 +89,18 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
+      - name: Instalar Secrets Store CSI Driver
+        run: |
+          echo "Instalando CSI Driver (Secrets Store) e AWS Provider..."
+          
+          kubectl apply -f https://github.com/kubernetes-sigs/secrets-store-csi-driver/releases/latest/download/secrets-store.csi.k8s.io.yaml
+          kubectl apply -f https://github.com/aws/secrets-store-csi-driver-provider-aws/releases/latest/download/secrets-store-csi-driver-provider-aws.yaml
+          
+          echo "Aguardando o registro do Custom Resource Definition (CRD)..."
+          kubectl wait --for condition=established crd/secretproviderclasses.secrets-store.csi.x-k8s.io --timeout=90s
+          
+          echo "Instalação do CSI Driver concluída."
+
       - name: Aplicar Manifestos Kubernetes
         run: |
           echo "Aplicando todos os manifestos em infra/k8s..."
