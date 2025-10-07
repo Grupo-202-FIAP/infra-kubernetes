@@ -62,18 +62,3 @@ variable "tags" {
   type        = map(string)
   description = "Tags adicionais para o cluster e nodes"
 }
-
-variable "db_url_parameter" {
-  type        = string
-  description = "Nome do parâmetro no SSM que contém o DB_URL"
-}
-
-variable "db_user_parameter" {
-  type        = string
-  description = "Nome do parâmetro no SSM que contém o DB_USER"
-}
-
-variable "db_pass_parameter" {
-  type        = string
-  description = "Nome do parâmetro no SSM que contém o DB_PASS"
-}

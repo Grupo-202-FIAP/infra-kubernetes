@@ -15,6 +15,3 @@ tags = {
 endpoint_private_access = true
 endpoint_public_access  = true
 public_access_cidrs     = ["0.0.0.0/0"]
-db_pass_parameter       = "/fastfood/rds/password"
-db_user_parameter       = "/fastfood/rds/username"
-db_url_parameter        = "/fastfood/rds/endpoint"
