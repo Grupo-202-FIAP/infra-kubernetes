@@ -89,17 +89,27 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
-      - name: Instalar Secrets Store CSI Driver
+      - name: Instalar Helm
         run: |
-          echo "Instalando CSI Driver (Secrets Store) e AWS Provider"
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Instalar Secrets Store CSI Driver + AWS Provider via Helm
+        run: |
+          helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+          helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws
+          helm repo update
           
-          kubectl apply -f https://github.com/kubernetes-sigs/secrets-store-csi-driver/releases/download/v1.5.4/secrets-store-csi-driver.yaml
-          kubectl apply -f https://github.com/aws/secrets-store-csi-driver-provider-aws/releases/download/v2.1.1/secrets-store-csi-driver-provider-aws.yaml
+          helm upgrade --install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
+            --namespace kube-system \
+            --create-namespace \
+            --version 1.5.4
           
-          echo "Aguardando o registro do Custom Resource Definition (CRD)..."
+          helm upgrade --install aws-provider aws-secrets-provider/secrets-store-csi-driver-provider-aws \
+            --namespace kube-system \
+            --create-namespace \
+            --version 2.1.1
+          
           kubectl wait --for condition=established crd/secretproviderclasses.secrets-store.csi.x-k8s.io --timeout=90s
-          
-          echo "Instalação do CSI Driver concluída."
 
       - name: Aplicar Manifestos Kubernetes
         run: |
@@ -135,3 +145,4 @@ jobs:
           else
             echo "Rollout concluído com sucesso!"
           fi
+ 
