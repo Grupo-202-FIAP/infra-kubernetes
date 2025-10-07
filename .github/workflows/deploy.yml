@@ -11,11 +11,11 @@ on:
       deployment:
         description: "Deployment Kubernetes a atualizar"
         required: true
-        default: "nexTime-api"
+        default: "fastfood-app"
       container:
-        description: "Container (nome do container dentro do pod) a atualizar"
+        description: "Container (nome do container dentro do pod)"
         required: true
-        default: "nexTime-container"
+        default: "fastfood-api"
       namespace:
         description: "Namespace Kubernetes"
         required: true
@@ -31,12 +31,20 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Debug - Verificar se Secrets não estão vazios
+        run: |
+          echo "Access Key ID está presente: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "Secret Access Key está presente: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "Session Token está presente: ${{ secrets.AWS_SESSION_TOKEN != '' }}"
+          echo "Region está presente: ${{ secrets.AWS_REGION != '' }}"
+
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_SECRET_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init
@@ -54,10 +62,10 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./infra/terraform
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
-        working-directory: ./infra/terraform
+#      - name: Terraform Apply
+#        if: github.ref == 'refs/heads/main'
+#        run: terraform apply -auto-approve tfplan
+#        working-directory: ./infra/terraform
 
   deploy:
     runs-on: ubuntu-latest
@@ -71,14 +79,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_SECRET_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Instalar kubectl e Configurar Acesso ao EKS
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
-          aws eks update-kubeconfig --region ${{ secrets.AWS_SECRET_REGION }} --name nexTime-cluster
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
+
+      - name: Aplicar Manifestos Kubernetes
+        run: |
+          echo "Aplicando todos os manifestos em infra/k8s..."
+          kubectl apply -R -f ./infra/k8s/
 
       - name: Deploy no Kubernetes
         env:

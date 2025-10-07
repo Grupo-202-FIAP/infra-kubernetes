@@ -8,7 +8,7 @@ node_min_size       = 1
 node_max_size       = 1
 node_desired_size   = 1
 node_instance_types = ["t3.medium"]
-tags                = {
+tags = {
   Environment = "dev"
   Project     = "nexTime"
 }
