@@ -93,23 +93,29 @@ jobs:
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Instalar Secrets Store CSI Driver + AWS Provider via Helm
+      - name: Instalar AWS Provider do Secrets Store CSI Driver via Helm
         run: |
+          echo "Instalando Secrets Store CSI Driver e AWS Provider via Helm"
+          
           helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
-          helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws
+          helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws/charts
           helm repo update
           
           helm upgrade --install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
             --namespace kube-system \
             --create-namespace \
-            --version 1.5.4
+            --version 1.6.0
           
           helm upgrade --install aws-provider aws-secrets-provider/secrets-store-csi-driver-provider-aws \
             --namespace kube-system \
             --create-namespace \
-            --version 2.1.1
+            --version 2.1.1 \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-secrets-provider-sa
           
           kubectl wait --for condition=established crd/secretproviderclasses.secrets-store.csi.x-k8s.io --timeout=90s
+          
+          echo "Instalação do CSI Driver e AWS Provider concluída."
 
       - name: Aplicar Manifestos Kubernetes
         run: |
