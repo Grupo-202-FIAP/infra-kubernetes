@@ -132,3 +132,4 @@ jobs:
           else
             echo "Rollout concluído com sucesso!"
           fi
+ 
