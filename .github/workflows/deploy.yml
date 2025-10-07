@@ -94,6 +94,9 @@ jobs:
           echo "Aplicando todos os manifestos em infra/k8s..."
           kubectl apply -R -f ./infra/k8s/
 
+      - name: Substituir variáveis no secret
+        run: envsubst < k8s/app-secret.yaml | kubectl apply -f -
+
       - name: Deploy no Kubernetes
         env:
           K8S_IMAGE: ${{ github.event.inputs.image }}
