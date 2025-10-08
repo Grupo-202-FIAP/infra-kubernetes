@@ -69,6 +69,10 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
     needs: terraform
     steps:
       - name: Checkout Infra Repo
@@ -93,6 +97,10 @@ jobs:
         run: |
           echo "Aplicando todos os manifestos em infra/k8s..."
           kubectl apply -R -f ./infra/k8s/
+
+
+      - name: Substituir variáveis no secret
+        run: envsubst < infra/k8s/app/secrets/secret.yaml | kubectl apply -f -
 
       - name: Deploy no Kubernetes
         env:
