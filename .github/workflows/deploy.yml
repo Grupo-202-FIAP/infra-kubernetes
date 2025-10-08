@@ -62,17 +62,13 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./infra/terraform
 
-#      - name: Terraform Apply
-#        if: github.ref == 'refs/heads/main'
-#        run: terraform apply -auto-approve tfplan
-#        working-directory: ./infra/terraform
+  #      - name: Terraform Apply
+  #        if: github.ref == 'refs/heads/main'
+  #        run: terraform apply -auto-approve tfplan
+  #        working-directory: ./infra/terraform
 
   deploy:
     runs-on: ubuntu-latest
-    env:
-      DB_URL: ${{ secrets.DB_URL }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASS }}
     needs: terraform
     steps:
       - name: Checkout Infra Repo
@@ -93,15 +89,10 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name nexTime-cluster
 
-      - name: Show env (somente debug)
+      - name: Aplicar Manifestos Kubernetes
         run: |
-          echo "DB_URL is $DB_URL"
-          echo "DB_USER is $DB_USER"
-          # NÃO mostre DB_PASS em logs reais
-          echo "DB_PASS length: ${#DB_PASS}"
-
-      - name: Substituir variáveis no secret
-        run: envsubst < k8s/app/secret.yaml | kubectl apply -f -
+          echo "Aplicando todos os manifestos em infra/k8s..."
+          kubectl apply -R -f ./infra/k8s/
 
       - name: Deploy no Kubernetes
         env:
