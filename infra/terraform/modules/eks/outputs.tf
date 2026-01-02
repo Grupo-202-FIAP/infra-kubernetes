@@ -17,3 +17,11 @@ output "node_group_arn" {
 output "node_group_name" {
   value = aws_eks_node_group.default.node_group_name
 }
+
+output "oidc_provider_arn" {
+  value = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "oidc_provider_url" {
+  value = aws_iam_openid_connect_provider.eks.url
+}
