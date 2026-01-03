@@ -1,3 +1,9 @@
+variable "aws_region" {
+  type        = string
+  description = "Região AWS onde os recursos serão criados"
+  default     = "us-east-1"
+}
+
 variable "cluster_name" {
   type        = string
   description = "Nome do cluster EKS"
@@ -13,11 +19,6 @@ variable "cluster_version" {
   description = "Versão do cluster EKS"
 }
 
-variable "cluster_role_arn" {
-  type        = string
-  description = "IAM Role ARN para o cluster"
-}
-
 variable "endpoint_private_access" {
   type        = bool
   description = "Habilita acesso privado ao endpoint do cluster"
@@ -31,11 +32,6 @@ variable "endpoint_public_access" {
 variable "public_access_cidrs" {
   type        = list(string)
   description = "CIDRs permitidos para acesso público ao endpoint"
-}
-
-variable "node_role_arn" {
-  type        = string
-  description = "IAM Role ARN para os nodes"
 }
 
 variable "node_min_size" {

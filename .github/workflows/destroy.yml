@@ -1,8 +1,12 @@
-name: Deploy Infra Kubernetes (EKS + Addons)
+name: Destroy Infra Kubernetes (EKS)
 
 on:
-  push:
-    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite DESTROY para confirmar a destruição do cluster'
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -13,9 +17,11 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
-  terraform:
-    name: Terraform Infra Kubernetes
+  terraform-destroy:
+    name: Terraform Destroy Infra Kubernetes
     runs-on: ubuntu-latest
+
+    if: github.event.inputs.confirm == 'DESTROY'
 
     defaults:
       run:
@@ -39,12 +45,5 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
