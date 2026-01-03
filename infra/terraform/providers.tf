@@ -16,11 +16,24 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.11"
     }
+
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+
   }
+
+  backend "s3" {
+    bucket = "nextime-food-state-bucket"
+    key    = "eks-cluster/infra.tfstate"
+    region = "us-east-1"
+  }
+
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 provider "kubernetes" {

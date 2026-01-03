@@ -11,7 +11,7 @@ resource "kubernetes_manifest" "external_secrets_secretstore" {
       provider = {
         aws = {
           service = "ParameterStore"
-          region  = "us-east-1"
+          region  = var.aws_region
           auth = {
             jwt = {
               serviceAccountRef = {

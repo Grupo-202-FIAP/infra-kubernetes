@@ -1,3 +1,9 @@
+variable "aws_region" {
+  type        = string
+  description = "Região AWS onde os recursos serão criados"
+  default     = "us-east-1"
+}
+
 variable "cluster_name" {
   type        = string
   description = "Nome do cluster EKS"

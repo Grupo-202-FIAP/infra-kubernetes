@@ -26,3 +26,4 @@ terraform.rc
 # Ignore lock file (opcional - alguns times preferem versionar)
 # .terraform.lock.hcl
 
+
