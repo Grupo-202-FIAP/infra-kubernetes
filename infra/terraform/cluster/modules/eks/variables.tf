@@ -67,3 +67,8 @@ variable "public_access_cidrs" {
   description = "Lista de CIDRs que podem acessar o endpoint público do EKS."
   type        = list(string)
 }
+
+variable "ami_type" {
+  description = "Tipo de AMI para o EKS"
+  type = string
+}

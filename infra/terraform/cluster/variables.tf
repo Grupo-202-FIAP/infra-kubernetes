@@ -50,3 +50,8 @@ variable "public_access_cidrs" {
 variable "tags" {
   type = map(string)
 }
+
+variable "ami_type" {
+  description = "Tipo de AMI para o EKS"
+  type        = string
+}
