@@ -11,7 +11,7 @@ resource "kubernetes_manifest" "external_secrets_secretstore" {
       provider = {
         aws = {
           service = "ParameterStore"
-          region  = var.aws_region
+          region  = var.region
           auth = {
             jwt = {
               serviceAccountRef = {
@@ -92,7 +92,7 @@ resource "kubernetes_manifest" "limit_range" {
   }
 
   depends_on = [
-    module.eks
+    data.terraform_remote_state.cluster
   ]
 }
 
@@ -116,7 +116,7 @@ resource "kubernetes_manifest" "resource_quota" {
   }
 
   depends_on = [
-    module.eks
+    data.terraform_remote_state.cluster
   ]
 }
 

@@ -1,4 +1,4 @@
-aws_region          = "us-east-1"
+region          = "us-east-1"
 environment         = "dev"
 cluster_name        = "nexTime-cluster"
 cluster_version     = "1.28"

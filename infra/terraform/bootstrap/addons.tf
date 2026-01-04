@@ -9,7 +9,7 @@ resource "helm_release" "argocd" {
   create_namespace = true
 
   depends_on = [
-    module.eks
+    data.terraform_remote_state.cluster
   ]
 }
 
@@ -31,7 +31,7 @@ resource "helm_release" "external_secrets" {
   })]
 
   depends_on = [
-    module.eks,
+    data.terraform_remote_state.cluster,
     aws_iam_role.external_secrets
   ]
 }
@@ -43,7 +43,7 @@ resource "helm_release" "aws_lb_controller" {
   namespace  = "kube-system"
 
   values = [yamlencode({
-    clusterName = module.eks.cluster_name
+    clusterName = data.terraform_remote_state.cluster.outputs.cluster_name
     serviceAccount = {
       create = true
       name   = "aws-load-balancer-controller"
@@ -54,7 +54,7 @@ resource "helm_release" "aws_lb_controller" {
   })]
 
   depends_on = [
-    module.eks,
+    data.terraform_remote_state.cluster,
     aws_iam_role.aws_lb_controller
   ]
 }
@@ -78,7 +78,7 @@ resource "helm_release" "ebs_csi" {
   })]
 
   depends_on = [
-    module.eks,
+    data.terraform_remote_state.cluster,
     aws_iam_role.ebs_csi
   ]
 }
@@ -90,7 +90,7 @@ resource "helm_release" "metrics_server" {
   namespace  = "kube-system"
 
   depends_on = [
-    module.eks
+    data.terraform_remote_state.cluster
   ]
 }
 
@@ -106,7 +106,7 @@ resource "helm_release" "datadog" {
       apiKeyExistingSecret = "datadog-secret"
       apiKey               = ""
       site                 = "datadoghq.com"
-      clusterName          = module.eks.cluster_name
+      clusterName          = data.terraform_remote_state.cluster.outputs.cluster_name
       apm                  = { enabled = true }
       logs                 = { enabled = true }
     }
