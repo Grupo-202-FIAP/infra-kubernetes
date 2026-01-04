@@ -13,13 +13,13 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
-  terraform:
-    name: Terraform Infra Kubernetes
+  deploy-cluster:
+    name: Deploy EKS Cluster
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: infra/terraform
+        working-directory: infra/terraform/cluster
 
     steps:
       - name: Checkout
@@ -36,15 +36,52 @@ jobs:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
+      - name: Terraform Init - Cluster
         run: terraform init
 
-      - name: Terraform Validate
+      - name: Terraform Validate - Cluster
         run: terraform validate
 
-      - name: Terraform Plan
-        run: terraform plan
+      - name: Terraform Plan - Cluster
+        run: terraform plan -var-file=terraform.tfvars
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+      - name: Terraform Apply - Cluster
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
+
+  deploy-bootstrap:
+    name: Deploy Bootstrap (ArgoCD, Helm, etc)
+    runs-on: ubuntu-latest
+    needs: deploy-cluster
+
+    defaults:
+      run:
+        working-directory: infra/terraform/bootstrap
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init - Bootstrap
+        run: terraform init
+
+      - name: Terraform Validate - Bootstrap
+        run: terraform validate
+
+      - name: Terraform Plan - Bootstrap
+        run: terraform plan -var-file=terraform.tfvars
+
+      - name: Terraform Apply - Bootstrap
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        run: terraform apply -auto-approve -var-file=terraform.tfvars

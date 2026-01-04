@@ -31,6 +31,10 @@ resource "aws_eks_node_group" "default" {
     min_size     = var.node_min_size
   }
 
+  update_config {
+    max_unavailable = 1
+  }
+
   instance_types = var.node_instance_types
 
   tags = merge(
