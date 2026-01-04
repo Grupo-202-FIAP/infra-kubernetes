@@ -1,7 +1,7 @@
 data "terraform_remote_state" "cluster" {
   backend = "s3"
   config = {
-    bucket = "terraform-state-bucket-nextime"
+    bucket = "nextime-food-state-bucket"
     key    = "infra-kubernetes/cluster.tfstate"
     region = "us-east-1"
   }

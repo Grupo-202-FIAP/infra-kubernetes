@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket  = "terraform-state-bucket-nextime"
+    bucket  = "nextime-food-state-bucket"
     key     = "infra-kubernetes/cluster.tfstate"
     region  = "us-east-1"
     encrypt = true
