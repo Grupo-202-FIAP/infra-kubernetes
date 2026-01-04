@@ -1,4 +1,4 @@
-region          = "us-east-1"
+region              = "us-east-1"
 environment         = "dev"
 cluster_name        = "nexTime-cluster"
 cluster_version     = "1.28"
@@ -13,3 +13,4 @@ tags = {
 endpoint_private_access = true
 endpoint_public_access  = true
 public_access_cidrs     = ["0.0.0.0/0"]
+ami_type                = "AL2_x86_64"
