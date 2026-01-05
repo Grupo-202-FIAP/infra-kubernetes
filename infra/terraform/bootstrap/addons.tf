@@ -14,11 +14,16 @@ resource "helm_release" "argocd" {
 }
 
 resource "helm_release" "external_secrets" {
-  name             = "external-secrets"
-  repository       = "https://charts.external-secrets.io"
-  chart            = "external-secrets"
+  name       = "external-secrets"
+  repository = "https://charts.external-secrets.io"
+  chart      = "external-secrets"
+  version    = "1.2.1"
+
   namespace        = "external-secrets"
   create_namespace = true
+
+  wait    = true
+  timeout = 600
 
   values = [yamlencode({
     installCRDs = true
@@ -34,9 +39,11 @@ resource "helm_release" "external_secrets" {
 
   depends_on = [
     data.terraform_remote_state.cluster,
-    aws_iam_role.external_secrets
+    aws_iam_role.external_secrets,
+    helm_release.aws_lb_controller
   ]
 }
+
 
 
 resource "helm_release" "aws_lb_controller" {
