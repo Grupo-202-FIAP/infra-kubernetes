@@ -1,6 +1,6 @@
 region              = "us-east-1"
 environment         = "dev"
-cluster_name        = "nexTime-cluster"
+cluster_name        = "nextime-cluster"
 cluster_version     = "1.29"
 node_min_size       = 2
 node_max_size       = 2

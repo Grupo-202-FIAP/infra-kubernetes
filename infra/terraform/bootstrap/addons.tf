@@ -39,8 +39,7 @@ resource "helm_release" "external_secrets" {
 
   depends_on = [
     data.terraform_remote_state.cluster,
-    aws_iam_role.external_secrets,
-    helm_release.aws_lb_controller
+    aws_iam_role.external_secrets
   ]
 }
 
@@ -54,6 +53,9 @@ resource "helm_release" "aws_lb_controller" {
 
   values = [yamlencode({
     clusterName = data.terraform_remote_state.cluster.outputs.cluster_name
+    region      = var.region
+    vpcId       = data.terraform_remote_state.cluster.outputs.vpc_id
+
     serviceAccount = {
       create = true
       name   = "aws-load-balancer-controller"
@@ -62,6 +64,7 @@ resource "helm_release" "aws_lb_controller" {
       }
     }
   })]
+
 
   depends_on = [
     data.terraform_remote_state.cluster,
@@ -99,10 +102,17 @@ resource "helm_release" "metrics_server" {
   chart      = "metrics-server"
   namespace  = "kube-system"
 
+  values = [yamlencode({
+    args = [
+      "--kubelet-insecure-tls"
+    ]
+  })]
+
   depends_on = [
     data.terraform_remote_state.cluster
   ]
 }
+
 
 resource "helm_release" "datadog" {
   name             = "datadog"
@@ -115,45 +125,13 @@ resource "helm_release" "datadog" {
     datadog = {
       apiKeyExistingSecret = "datadog-secret"
       site                 = "datadoghq.com"
-      clusterName          = data.terraform_remote_state.cluster.outputs.cluster_name
+      clusterName          = lower(data.terraform_remote_state.cluster.outputs.cluster_name)
       apm                  = { enabled = true }
       logs                 = { enabled = true }
     }
-
-    extraObjects = [
-      {
-        apiVersion = "external-secrets.io/v1beta1"
-        kind       = "ExternalSecret"
-        metadata = {
-          name      = "datadog-secret"
-          namespace = "datadog"
-        }
-        spec = {
-          refreshInterval = "1h"
-          secretStoreRef = {
-            name = "aws-ssm"
-            kind = "SecretStore"
-          }
-          target = {
-            name = "datadog-secret"
-          }
-          data = [
-            {
-              secretKey = "api-key"
-              remoteRef = {
-                key = "/datadog/api-key"
-              }
-            }
-          ]
-        }
-      }
-    ]
   })]
-
-  depends_on = [
-    helm_release.external_secrets
-  ]
 }
+
 
 
 
