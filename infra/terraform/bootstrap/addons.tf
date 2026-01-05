@@ -21,6 +21,8 @@ resource "helm_release" "external_secrets" {
   create_namespace = true
 
   values = [yamlencode({
+    installCRDs = true
+
     serviceAccount = {
       create = true
       name   = "external-secrets-sa"
@@ -35,6 +37,7 @@ resource "helm_release" "external_secrets" {
     aws_iam_role.external_secrets
   ]
 }
+
 
 resource "helm_release" "aws_lb_controller" {
   name       = "aws-load-balancer-controller"
@@ -104,21 +107,47 @@ resource "helm_release" "datadog" {
   values = [yamlencode({
     datadog = {
       apiKeyExistingSecret = "datadog-secret"
-      apiKey               = ""
       site                 = "datadoghq.com"
       clusterName          = data.terraform_remote_state.cluster.outputs.cluster_name
       apm                  = { enabled = true }
       logs                 = { enabled = true }
     }
-    clusterAgent = {
-      enabled = true
-    }
+
+    extraObjects = [
+      {
+        apiVersion = "external-secrets.io/v1beta1"
+        kind       = "ExternalSecret"
+        metadata = {
+          name      = "datadog-secret"
+          namespace = "datadog"
+        }
+        spec = {
+          refreshInterval = "1h"
+          secretStoreRef = {
+            name = "aws-ssm"
+            kind = "SecretStore"
+          }
+          target = {
+            name = "datadog-secret"
+          }
+          data = [
+            {
+              secretKey = "api-key"
+              remoteRef = {
+                key = "/datadog/api-key"
+              }
+            }
+          ]
+        }
+      }
+    ]
   })]
 
   depends_on = [
     helm_release.external_secrets,
-    kubernetes_manifest.external_secret_datadog
+    helm_release.external_secrets_secretstore
   ]
 }
+
 
 

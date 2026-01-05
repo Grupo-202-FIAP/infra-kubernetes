@@ -1,69 +1,44 @@
-# External Secrets - SecretStore
-resource "kubernetes_manifest" "external_secrets_secretstore" {
-  manifest = {
-    apiVersion = "external-secrets.io/v1beta1"
-    kind       = "SecretStore"
-    metadata = {
-      name      = "aws-ssm"
-      namespace = "datadog"
-    }
-    spec = {
-      provider = {
-        aws = {
-          service = "ParameterStore"
-          region  = var.region
-          auth = {
-            jwt = {
-              serviceAccountRef = {
-                name      = "external-secrets-sa"
-                namespace = "external-secrets"
+# External Secrets - SecretStore (via Helm raw chart)
+resource "helm_release" "external_secrets_secretstore" {
+  name       = "external-secrets-secretstore"
+  repository = "https://charts.helm.sh/incubator"
+  chart      = "raw"
+  namespace  = "external-secrets"
+
+  values = [yamlencode({
+    resources = [
+      {
+        apiVersion = "external-secrets.io/v1beta1"
+        kind       = "SecretStore"
+        metadata = {
+          name      = "aws-ssm"
+          namespace = "external-secrets"
+        }
+        spec = {
+          provider = {
+            aws = {
+              service = "SSM"
+              region  = var.region
+              auth = {
+                jwt = {
+                  serviceAccountRef = {
+                    name      = "external-secrets-sa"
+                    namespace = "external-secrets"
+                  }
+                }
               }
             }
           }
         }
       }
-    }
-  }
+    ]
+  })]
 
   depends_on = [
     helm_release.external_secrets
   ]
 }
 
-# External Secrets - ExternalSecret para Datadog
-resource "kubernetes_manifest" "external_secret_datadog" {
-  manifest = {
-    apiVersion = "external-secrets.io/v1beta1"
-    kind       = "ExternalSecret"
-    metadata = {
-      name      = "datadog-api-key"
-      namespace = "datadog"
-    }
-    spec = {
-      refreshInterval = "1h"
-      secretStoreRef = {
-        name = "aws-ssm"
-        kind = "SecretStore"
-      }
-      target = {
-        name           = "datadog-secret"
-        creationPolicy = "Owner"
-      }
-      data = [
-        {
-          secretKey = "api-key"
-          remoteRef = {
-            key = "/datadog/api-key"
-          }
-        }
-      ]
-    }
-  }
-
-  depends_on = [
-    kubernetes_manifest.external_secrets_secretstore
-  ]
-}
 
 # LimitRange para namespace default
 resource "kubernetes_manifest" "limit_range" {
@@ -96,6 +71,7 @@ resource "kubernetes_manifest" "limit_range" {
   ]
 }
 
+
 # ResourceQuota para namespace default
 resource "kubernetes_manifest" "resource_quota" {
   manifest = {
@@ -119,4 +95,5 @@ resource "kubernetes_manifest" "resource_quota" {
     data.terraform_remote_state.cluster
   ]
 }
+
 

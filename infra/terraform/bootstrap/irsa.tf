@@ -33,7 +33,7 @@ resource "aws_iam_policy" "external_secrets_ssm" {
         "ssm:GetParameters",
         "ssm:GetParametersByPath"
       ]
-      Resource = "arn:aws:ssm:${data.aws_caller_identity.current.account_id}:parameter/datadog/*"
+      Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/datadog/*"
     }]
   })
 }
