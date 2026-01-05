@@ -47,14 +47,15 @@ resource "helm_release" "external_secrets" {
 
 resource "helm_release" "aws_lb_controller" {
   name       = "aws-load-balancer-controller"
+  namespace  = "kube-system"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
+  version    = "1.7.2"
 
   values = [yamlencode({
     clusterName = data.terraform_remote_state.cluster.outputs.cluster_name
-    region      = var.region
-    vpcId       = data.terraform_remote_state.cluster.outputs.vpc_id
+    region      = "us-east-1"
+    vpcId       = data.terraform_remote_state.infra_core.outputs.vpc_id
 
     serviceAccount = {
       create = true
@@ -65,12 +66,11 @@ resource "helm_release" "aws_lb_controller" {
     }
   })]
 
-
   depends_on = [
-    data.terraform_remote_state.cluster,
     aws_iam_role.aws_lb_controller
   ]
 }
+
 
 resource "helm_release" "ebs_csi" {
   name       = "aws-ebs-csi-driver"
