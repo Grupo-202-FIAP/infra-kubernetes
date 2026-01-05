@@ -2,7 +2,7 @@ data "terraform_remote_state" "infra_core" {
   backend = "s3"
   config = {
     bucket = "nextime-food-state-bucket"
-    key    = "infra-core/terraform.tfstate"
+    key    = "infra-core/infra.tfstate"
     region = "us-east-1"
   }
 }
@@ -11,7 +11,7 @@ data "terraform_remote_state" "cluster" {
   backend = "s3"
   config = {
     bucket = "nextime-food-state-bucket"
-    key    = "infra-kubernetes/terraform.tfstate"
+    key    = "infra-kubernetes/cluster.tfstate"
     region = "us-east-1"
   }
 }
