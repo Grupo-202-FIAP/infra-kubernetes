@@ -151,8 +151,7 @@ resource "helm_release" "datadog" {
   })]
 
   depends_on = [
-    helm_release.external_secrets,
-    helm_release.external_secrets_secretstore
+    helm_release.external_secrets
   ]
 }
 
