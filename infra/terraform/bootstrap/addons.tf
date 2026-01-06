@@ -113,9 +113,12 @@ resource "helm_release" "metrics_server" {
   ]
 }
 
-resource "time_sleep" "wait_external_secrets_crd" {
+resource "null_resource" "wait_external_secrets_crd" {
   depends_on = [helm_release.external_secrets]
-  create_duration = "60s"
+
+  triggers = {
+    external_secrets_release = helm_release.external_secrets.id
+  }
 }
 
 resource "helm_release" "datadog" {

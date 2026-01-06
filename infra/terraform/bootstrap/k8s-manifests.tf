@@ -89,7 +89,7 @@ resource "kubernetes_manifest" "datadog_secretstore" {
   depends_on = [
     kubernetes_namespace.datadog,
     helm_release.external_secrets,
-    time_sleep.wait_external_secrets_crd
+    null_resource.wait_external_secrets_crd
   ]
 }
 
@@ -127,7 +127,7 @@ resource "kubernetes_manifest" "datadog_external_secret" {
 
   depends_on = [
     kubernetes_manifest.datadog_secretstore,
-    time_sleep.wait_external_secrets_crd
+    null_resource.wait_external_secrets_crd
   ]
 }
 
