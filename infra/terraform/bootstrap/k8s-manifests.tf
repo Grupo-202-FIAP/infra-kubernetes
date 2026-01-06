@@ -72,7 +72,7 @@ resource "kubernetes_manifest" "datadog_secretstore" {
       provider = {
         aws = {
           service = "ParameterStore"
-          region  = "us-east-1"
+          region  = var.region
           auth = {
             jwt = {
               serviceAccountRef = {
@@ -88,7 +88,8 @@ resource "kubernetes_manifest" "datadog_secretstore" {
 
   depends_on = [
     kubernetes_namespace.datadog,
-    null_resource.wait_external_secrets_crd
+    helm_release.external_secrets,
+    time_sleep.wait_external_secrets_crd
   ]
 }
 
@@ -125,8 +126,8 @@ resource "kubernetes_manifest" "datadog_external_secret" {
   }
 
   depends_on = [
-    helm_release.external_secrets,
-    kubernetes_manifest.datadog_secretstore
+    kubernetes_manifest.datadog_secretstore,
+    time_sleep.wait_external_secrets_crd
   ]
 }
 
