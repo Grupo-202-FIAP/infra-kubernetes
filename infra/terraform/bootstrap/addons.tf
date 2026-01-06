@@ -113,23 +113,6 @@ resource "helm_release" "metrics_server" {
   ]
 }
 
-resource "helm_release" "external_secrets" {
-  name       = "external-secrets"
-  repository = "https://charts.external-secrets.io"
-  chart      = "external-secrets"
-  version    = "1.2.1"
-
-  namespace        = "external-secrets"
-  create_namespace = true
-
-  wait    = true
-  timeout = 600
-
-  values = [yamlencode({
-    installCRDs = true
-  })]
-}
-
 resource "null_resource" "wait_external_secrets_crd" {
   provisioner "local-exec" {
     command = <<EOT
