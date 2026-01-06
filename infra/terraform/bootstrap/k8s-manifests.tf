@@ -60,12 +60,73 @@ resource "kubernetes_namespace" "datadog" {
   }
 }
 
-resource "kubernetes_manifest" "datadog_external_secret" {
-  manifest = yamldecode(file("${path.module}/manifests/datadog-external-secret.yaml"))
+resource "kubernetes_manifest" "datadog_secretstore" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1beta1"
+    kind       = "SecretStore"
+    metadata = {
+      name      = "aws-ssm"
+      namespace = "datadog"
+    }
+    spec = {
+      provider = {
+        aws = {
+          service = "ParameterStore"
+          region  = "us-east-1"
+          auth = {
+            jwt = {
+              serviceAccountRef = {
+                name      = "external-secrets-sa"
+                namespace = "external-secrets"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   depends_on = [
-    kubernetes_namespace.datadog,
-    helm_release.external_secrets
+    helm_release.external_secrets,
+    kubernetes_namespace.datadog
+  ]
+}
+
+resource "kubernetes_manifest" "datadog_external_secret" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1beta1"
+    kind       = "ExternalSecret"
+    metadata = {
+      name      = "datadog-api-key"
+      namespace = "datadog"
+    }
+    spec = {
+      refreshInterval = "1h"
+
+      secretStoreRef = {
+        name = "aws-ssm"
+        kind = "SecretStore"
+      }
+
+      target = {
+        name           = "datadog-secret"
+        creationPolicy = "Owner"
+      }
+
+      data = [
+        {
+          secretKey = "api-key"
+          remoteRef = {
+            key = "/datadog/api-key"
+          }
+        }
+      ]
+    }
+  }
+
+  depends_on = [
+    helm_release.external_secrets,
+    kubernetes_manifest.datadog_secretstore
   ]
 }
 
