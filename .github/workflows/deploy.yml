@@ -79,7 +79,7 @@ jobs:
       - name: Wait for AWS Load Balancer Controller
         run: |
           aws eks update-kubeconfig \
-            --name nexTime-cluster \
+            --name nextime-cluster \
             --region $AWS_REGION
 
           kubectl wait \
