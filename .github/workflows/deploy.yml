@@ -20,7 +20,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: terraform/cluster
+        working-directory: infra/terraform/cluster
 
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: terraform/bootstrap-core
+        working-directory: infra/terraform/bootstrap-core
 
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: terraform/bootstrap-addons
+        working-directory: infra/terraform/bootstrap-addons
 
     steps:
       - uses: actions/checkout@v4
