@@ -29,7 +29,7 @@ resource "kubernetes_manifest" "datadog_secretstore" {
             jwt = {
               serviceAccountRef = {
                 name      = "external-secrets-sa"
-                namespace = "external-secrets"
+                namespace = "datadog"
               }
             }
           }
