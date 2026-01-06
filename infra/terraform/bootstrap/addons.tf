@@ -113,13 +113,14 @@ resource "helm_release" "metrics_server" {
   ]
 }
 
-
 resource "helm_release" "datadog" {
-  name             = "datadog"
-  repository       = "https://helm.datadoghq.com"
-  chart            = "datadog"
-  namespace        = "datadog"
-  create_namespace = true
+  name       = "datadog"
+  repository = "https://helm.datadoghq.com"
+  chart      = "datadog"
+  namespace  = "datadog"
+
+  wait    = true
+  timeout = 900
 
   values = [yamlencode({
     datadog = {
@@ -130,7 +131,12 @@ resource "helm_release" "datadog" {
       logs                 = { enabled = true }
     }
   })]
+
+  depends_on = [
+    kubernetes_manifest.datadog_external_secret
+  ]
 }
+
 
 
 
