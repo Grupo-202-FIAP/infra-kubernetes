@@ -1,11 +1,8 @@
-# Helm Releases que dependem de CRDs
-
 resource "helm_release" "datadog" {
   name       = "datadog"
   namespace  = "datadog"
   repository = "https://helm.datadoghq.com"
   chart      = "datadog"
-  version    = "3.54.0"
 
   create_namespace = true
 
@@ -23,4 +20,3 @@ resource "helm_release" "datadog" {
     kubernetes_manifest.datadog_external_secret
   ]
 }
-
