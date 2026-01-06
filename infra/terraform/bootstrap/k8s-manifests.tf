@@ -54,4 +54,19 @@ resource "kubernetes_manifest" "resource_quota" {
   ]
 }
 
+resource "kubernetes_namespace" "datadog" {
+  metadata {
+    name = "datadog"
+  }
+}
+
+resource "kubernetes_manifest" "datadog_external_secret" {
+  manifest = yamldecode(file("${path.module}/manifests/datadog-external-secret.yaml"))
+
+  depends_on = [
+    kubernetes_namespace.datadog,
+    helm_release.external_secrets
+  ]
+}
+
 
