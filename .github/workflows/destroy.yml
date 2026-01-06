@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Digite DESTROY para confirmar a destruição do cluster'
+        description: 'Digite DESTROY para confirmar a destruição'
         required: true
         type: string
 
@@ -18,9 +18,8 @@ env:
 
 jobs:
   destroy-bootstrap:
-    name: Destroy Bootstrap (ArgoCD, Helm, etc)
+    name: Destroy Bootstrap
     runs-on: ubuntu-latest
-
     if: github.event.inputs.confirm == 'DESTROY'
 
     defaults:
@@ -28,31 +27,24 @@ jobs:
         working-directory: infra/terraform/bootstrap
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init - Bootstrap
-        run: terraform init
-
-      - name: Terraform Destroy - Bootstrap
-        run: terraform destroy -auto-approve -var-file=terraform.tfvars
+      - run: terraform init
+      - run: terraform destroy -auto-approve -var-file=terraform.tfvars
 
   destroy-cluster:
     name: Destroy EKS Cluster
     runs-on: ubuntu-latest
     needs: destroy-bootstrap
-
     if: github.event.inputs.confirm == 'DESTROY'
 
     defaults:
@@ -60,22 +52,16 @@ jobs:
         working-directory: infra/terraform/cluster
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init - Cluster
-        run: terraform init
-
-      - name: Terraform Destroy - Cluster
-        run: terraform destroy -auto-approve -var-file=terraform.tfvars
+      - run: terraform init
+      - run: terraform destroy -auto-approve -var-file=terraform.tfvars
