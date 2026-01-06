@@ -1,8 +1,8 @@
-name: Deploy Infra Kubernetes (EKS + Addons)
+name: Deploy Infra Kubernetes (EKS + Bootstrap)
 
 on:
   push:
-    branches: [dev]
+    branches: [ dev ]
 
 permissions:
   id-token: write
@@ -11,6 +11,7 @@ permissions:
 env:
   AWS_REGION: us-east-1
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CLUSTER_NAME: nextime-cluster
 
 jobs:
   deploy-cluster:
@@ -19,114 +20,111 @@ jobs:
 
     defaults:
       run:
-        working-directory: infra/terraform/cluster
+        working-directory: terraform/cluster
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - run: terraform init
-      - run: terraform validate
-      - run: terraform plan -var-file=terraform.tfvars
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
 
       - name: Terraform Apply - Cluster
-        run: terraform apply -auto-approve -var-file=terraform.tfvars
+        run: terraform apply -auto-approve
 
-  deploy-bootstrap:
-    name: Deploy Bootstrap (ArgoCD, Helm, etc.)
+
+  deploy-bootstrap-core:
+    name: Deploy Bootstrap Core (CRDs, IRSA, Controllers)
     runs-on: ubuntu-latest
     needs: deploy-cluster
 
     defaults:
       run:
-        working-directory: infra/terraform/bootstrap
+        working-directory: terraform/bootstrap-core
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init - Bootstrap
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name $CLUSTER_NAME \
+            --region $AWS_REGION
+
+      - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Validate - Bootstrap
+      - name: Terraform Validate
         run: terraform validate
+
+      - name: Terraform Apply - Bootstrap Core
+        run: terraform apply -auto-approve
+
+
+  deploy-bootstrap-addons:
+    name: Deploy Bootstrap Addons (Secrets, Datadog)
+    runs-on: ubuntu-latest
+    needs: deploy-bootstrap-core
+
+    defaults:
+      run:
+        working-directory: terraform/bootstrap-addons
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
 
-      - name: Configure kubectl
+      - name: Configure kubeconfig
         run: |
           aws eks update-kubeconfig \
-            --name nextime-cluster \
+            --name $CLUSTER_NAME \
             --region $AWS_REGION
 
-      - name: Terraform Apply - IAM Roles
-        run: |
-          terraform apply -auto-approve -var-file=terraform.tfvars \
-            -target=aws_iam_role.external_secrets \
-            -target=aws_iam_role.aws_lb_controller \
-            -target=aws_iam_role.ebs_csi \
-            -target=aws_iam_policy.external_secrets_ssm \
-            -target=aws_iam_policy.aws_lb_controller \
-            -target=aws_iam_role_policy_attachment.external_secrets_ssm \
-            -target=aws_iam_role_policy_attachment.aws_lb_controller \
-            -target=aws_iam_role_policy_attachment.ebs_csi
+      - name: Terraform Init
+        run: terraform init
 
-      - name: Terraform Apply - External Secrets
-        run: |
-          terraform apply -auto-approve -var-file=terraform.tfvars \
-            -target=helm_release.external_secrets
+      - name: Terraform Validate
+        run: terraform validate
 
-      - name: Wait for External Secrets CRDs
-        run: |
-          echo "Waiting for External Secrets CRDs to be available..."
-          for i in {1..30}; do
-            if kubectl get crd secretstores.external-secrets.io >/dev/null 2>&1 && \
-               kubectl get crd externalsecrets.external-secrets.io >/dev/null 2>&1; then
-              echo "External Secrets CRDs are available!"
-              exit 0
-            fi
-            echo "Attempt $i/30: CRDs not ready yet, waiting 5 seconds..."
-            sleep 5
-          done
-          echo "Timeout waiting for External Secrets CRDs"
-          exit 1
-
-      - name: Terraform Apply - Bootstrap Base
-        run: |
-          terraform apply -auto-approve -var-file=terraform.tfvars \
-            -target=helm_release.aws_lb_controller \
-            -target=helm_release.metrics_server \
-            -target=helm_release.ebs_csi \
-            -target=helm_release.argocd \
-            -target=kubernetes_namespace.datadog \
-            -target=null_resource.wait_external_secrets_crd \
-            -target=kubernetes_manifest.datadog_secretstore \
-            -target=kubernetes_manifest.datadog_external_secret
-
-      - name: Wait for AWS Load Balancer Controller
-        run: |
-          kubectl wait \
-            --for=condition=Available \
-            deployment/aws-load-balancer-controller \
-            -n kube-system \
-            --timeout=300s
-
-      - name: Terraform Apply - Bootstrap Full
-        run: terraform apply -auto-approve -var-file=terraform.tfvars
+      - name: Terraform Apply - Bootstrap Addons
+        run: terraform apply -auto-approve

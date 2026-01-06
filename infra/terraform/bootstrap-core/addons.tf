@@ -1,4 +1,4 @@
-# Helm Releases - Addons
+# Helm Releases - Addons que criam CRDs
 
 resource "helm_release" "argocd" {
   name             = "argocd"
@@ -15,19 +15,19 @@ resource "helm_release" "argocd" {
 
 resource "helm_release" "external_secrets" {
   name       = "external-secrets"
+  namespace  = "external-secrets"
   repository = "https://charts.external-secrets.io"
   chart      = "external-secrets"
-  version    = "1.2.1"
+  version    = "0.9.20"
 
-  namespace        = "external-secrets"
   create_namespace = true
 
-  wait    = true
-  timeout = 600
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
 
   values = [yamlencode({
-    installCRDs = true
-
     serviceAccount = {
       create = true
       name   = "external-secrets-sa"
@@ -37,13 +37,14 @@ resource "helm_release" "external_secrets" {
     }
   })]
 
+  wait    = true
+  timeout = 600
+
   depends_on = [
     data.terraform_remote_state.cluster,
     aws_iam_role.external_secrets
   ]
 }
-
-
 
 resource "helm_release" "aws_lb_controller" {
   name       = "aws-load-balancer-controller"
@@ -70,7 +71,6 @@ resource "helm_release" "aws_lb_controller" {
     aws_iam_role.aws_lb_controller
   ]
 }
-
 
 resource "helm_release" "ebs_csi" {
   name       = "aws-ebs-csi-driver"
@@ -112,44 +112,4 @@ resource "helm_release" "metrics_server" {
     data.terraform_remote_state.cluster
   ]
 }
-
-resource "null_resource" "wait_external_secrets_crd" {
-  depends_on = [helm_release.external_secrets]
-
-  triggers = {
-    external_secrets_release = helm_release.external_secrets.id
-  }
-}
-
-resource "helm_release" "datadog" {
-  name             = "datadog"
-  repository       = "https://helm.datadoghq.com"
-  chart            = "datadog"
-  namespace        = "datadog"
-  create_namespace = true
-
-  values = [yamlencode({
-    datadog = {
-      apiKeyExistingSecret = "datadog-secret"
-      apiKey               = ""
-      site                 = "datadoghq.com"
-      clusterName          = data.terraform_remote_state.cluster.outputs.cluster_name
-      apm                  = { enabled = true }
-      logs                 = { enabled = true }
-    }
-    clusterAgent = {
-      enabled = true
-    }
-  })]
-
-  depends_on = [
-    helm_release.external_secrets,
-    kubernetes_manifest.datadog_external_secret
-  ]
-}
-
-
-
-
-
 
