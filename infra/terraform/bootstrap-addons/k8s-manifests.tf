@@ -1,35 +1,39 @@
-# Kubernetes Manifests que dependem de CRDs
-
+# Cria namespace datadog
 resource "kubernetes_namespace" "datadog" {
   metadata {
     name = "datadog"
   }
-
-  depends_on = [
-    data.terraform_remote_state.bootstrap_core
-  ]
 }
 
+# Cria ServiceAccount no namespace datadog (precisa existir)
+resource "kubernetes_service_account" "external_secrets_sa" {
+  metadata {
+    name      = "external-secrets-sa"
+    namespace = kubernetes_namespace.datadog.metadata[0].name
+  }
+}
+
+# SecretStore namespaced
 resource "kubernetes_manifest" "datadog_secretstore" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
     kind       = "SecretStore"
 
     metadata = {
-      name      = "datadog-secretstore"
-      namespace = "datadog"
+      name      = "aws-ssm"
+      namespace = kubernetes_namespace.datadog.metadata[0].name
     }
 
     spec = {
       provider = {
         aws = {
-          service = "SecretsManager"
+          service = "ParameterStore"
           region  = var.region
           auth = {
             jwt = {
               serviceAccountRef = {
-                name      = "external-secrets-sa"
-                namespace = "datadog"
+                name      = kubernetes_service_account.external_secrets_sa.metadata[0].name
+                namespace = kubernetes_namespace.datadog.metadata[0].name
               }
             }
           }
@@ -40,18 +44,19 @@ resource "kubernetes_manifest" "datadog_secretstore" {
 
   depends_on = [
     kubernetes_namespace.datadog,
-    data.terraform_remote_state.bootstrap_core
+    kubernetes_service_account.external_secrets_sa
   ]
 }
 
+# ExternalSecret que vai buscar secrets do SecretStore
 resource "kubernetes_manifest" "datadog_external_secret" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
     kind       = "ExternalSecret"
 
     metadata = {
-      name      = "datadog-secret"
-      namespace = "datadog"
+      name      = "datadog-api-key"
+      namespace = kubernetes_namespace.datadog.metadata[0].name
     }
 
     spec = {
@@ -61,13 +66,14 @@ resource "kubernetes_manifest" "datadog_external_secret" {
         kind = "SecretStore"
       }
       target = {
-        name = "datadog-secret"
+        name           = "datadog-secret"
+        creationPolicy = "Owner"
       }
       data = [
         {
           secretKey = "api-key"
           remoteRef = {
-            key = "datadog/api-key"
+            key = "/datadog/api-key"
           }
         }
       ]
@@ -78,6 +84,7 @@ resource "kubernetes_manifest" "datadog_external_secret" {
     kubernetes_manifest.datadog_secretstore
   ]
 }
+
 
 resource "kubernetes_manifest" "limit_range" {
   manifest = {
