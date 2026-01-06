@@ -3,17 +3,13 @@ resource "kubernetes_namespace" "datadog" {
   metadata {
     name = "datadog"
   }
+
+  depends_on = [
+    data.terraform_remote_state.bootstrap_core
+  ]
 }
 
-# Cria ServiceAccount no namespace datadog (precisa existir)
-resource "kubernetes_service_account" "external_secrets_sa" {
-  metadata {
-    name      = "external-secrets-sa"
-    namespace = kubernetes_namespace.datadog.metadata[0].name
-  }
-}
-
-# SecretStore namespaced
+# SecretStore namespaced - usa o ServiceAccount criado pelo External Secrets Operator
 resource "kubernetes_manifest" "datadog_secretstore" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
@@ -32,8 +28,8 @@ resource "kubernetes_manifest" "datadog_secretstore" {
           auth = {
             jwt = {
               serviceAccountRef = {
-                name      = kubernetes_service_account.external_secrets_sa.metadata[0].name
-                namespace = kubernetes_namespace.datadog.metadata[0].name
+                name      = "external-secrets-sa"
+                namespace = "external-secrets"
               }
             }
           }
@@ -44,7 +40,7 @@ resource "kubernetes_manifest" "datadog_secretstore" {
 
   depends_on = [
     kubernetes_namespace.datadog,
-    kubernetes_service_account.external_secrets_sa
+    data.terraform_remote_state.bootstrap_core
   ]
 }
 
@@ -81,7 +77,8 @@ resource "kubernetes_manifest" "datadog_external_secret" {
   }
 
   depends_on = [
-    kubernetes_manifest.datadog_secretstore
+    kubernetes_manifest.datadog_secretstore,
+    data.terraform_remote_state.bootstrap_core
   ]
 }
 
