@@ -113,16 +113,35 @@ resource "helm_release" "metrics_server" {
   ]
 }
 
-resource "null_resource" "wait_external_secrets_crd" {
-  provisioner "local-exec" {
-    command = <<EOT
-kubectl get crd secretstores.external-secrets.io
-kubectl get crd externalsecrets.external-secrets.io
-EOT
-  }
+resource "time_sleep" "wait_external_secrets_crd" {
+  depends_on = [helm_release.external_secrets]
+  create_duration = "60s"
+}
+
+resource "helm_release" "datadog" {
+  name             = "datadog"
+  repository       = "https://helm.datadoghq.com"
+  chart            = "datadog"
+  namespace        = "datadog"
+  create_namespace = true
+
+  values = [yamlencode({
+    datadog = {
+      apiKeyExistingSecret = "datadog-secret"
+      apiKey               = ""
+      site                 = "datadoghq.com"
+      clusterName          = data.terraform_remote_state.cluster.outputs.cluster_name
+      apm                  = { enabled = true }
+      logs                 = { enabled = true }
+    }
+    clusterAgent = {
+      enabled = true
+    }
+  })]
 
   depends_on = [
-    helm_release.external_secrets
+    helm_release.external_secrets,
+    kubernetes_manifest.datadog_external_secret
   ]
 }
 
