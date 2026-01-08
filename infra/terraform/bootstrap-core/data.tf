@@ -22,3 +22,6 @@ data "aws_eks_cluster_auth" "this" {
 
 data "aws_caller_identity" "current" {}
 
+
+
+

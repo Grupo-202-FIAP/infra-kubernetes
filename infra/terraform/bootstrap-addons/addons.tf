@@ -4,7 +4,6 @@ resource "helm_release" "datadog" {
   repository = "https://helm.datadoghq.com"
   chart      = "datadog"
 
-  # Namespace já é criado pelo kubernetes_namespace.datadog
   create_namespace = false
 
   set {
