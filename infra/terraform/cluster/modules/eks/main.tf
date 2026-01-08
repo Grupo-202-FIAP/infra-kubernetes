@@ -40,16 +40,6 @@ resource "aws_eks_node_group" "default" {
 
   instance_types = var.node_instance_types
 
-  remote_access {
-    ec2_ssh_key               = null
-    source_security_group_ids = []
-  }
-
-  launch_template {
-    id      = aws_launch_template.nodes.id
-    version = "$Latest"
-  }
-
   tags = merge(
     {
       Name        = "${var.cluster_name}-node"
@@ -60,23 +50,3 @@ resource "aws_eks_node_group" "default" {
 
   depends_on = [aws_eks_cluster.this]
 }
-
-resource "aws_launch_template" "nodes" {
-  name_prefix   = "${var.cluster_name}-nodes-"
-  instance_type = var.node_instance_types[0]
-
-  network_interfaces {
-    security_groups = [var.node_security_group_id]
-  }
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = merge(
-      {
-        Name = "${var.cluster_name}-node"
-      },
-      var.tags
-    )
-  }
-}
-
