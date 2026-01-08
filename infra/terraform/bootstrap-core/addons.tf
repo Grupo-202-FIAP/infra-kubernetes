@@ -1,5 +1,10 @@
+# ==========================================
 # Helm Releases - Addons que criam CRDs
+# ==========================================
 
+# ----------------------
+# ArgoCD
+# ----------------------
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -8,11 +13,49 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
 
+  wait    = true
+  timeout = 600
+
   depends_on = [
     data.terraform_remote_state.cluster
   ]
 }
 
+# ----------------------
+# AWS Load Balancer Controller
+# ----------------------
+resource "helm_release" "aws_lb_controller" {
+  name       = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  version    = "1.7.2"
+
+  values = [yamlencode({
+    clusterName = data.terraform_remote_state.cluster.outputs.cluster_name
+    region      = "us-east-1"
+    vpcId       = data.terraform_remote_state.infra_core.outputs.vpc_id
+
+    serviceAccount = {
+      create = true
+      name   = "aws-load-balancer-controller"
+      annotations = {
+        "eks.amazonaws.com/role-arn" = aws_iam_role.aws_lb_controller.arn
+      }
+    }
+  })]
+
+  wait    = true
+  timeout = 600
+
+  depends_on = [
+    aws_iam_role.aws_lb_controller
+  ]
+}
+
+# ----------------------
+# External Secrets
+# ----------------------
 resource "helm_release" "external_secrets" {
   name       = "external-secrets"
   namespace  = "external-secrets"
@@ -42,36 +85,14 @@ resource "helm_release" "external_secrets" {
 
   depends_on = [
     data.terraform_remote_state.cluster,
-    aws_iam_role.external_secrets
+    aws_iam_role.external_secrets,
+    helm_release.aws_lb_controller  # garante que o webhook do LB controller esteja pronto
   ]
 }
 
-resource "helm_release" "aws_lb_controller" {
-  name       = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  version    = "1.7.2"
-
-  values = [yamlencode({
-    clusterName = data.terraform_remote_state.cluster.outputs.cluster_name
-    region      = "us-east-1"
-    vpcId       = data.terraform_remote_state.infra_core.outputs.vpc_id
-
-    serviceAccount = {
-      create = true
-      name   = "aws-load-balancer-controller"
-      annotations = {
-        "eks.amazonaws.com/role-arn" = aws_iam_role.aws_lb_controller.arn
-      }
-    }
-  })]
-
-  depends_on = [
-    aws_iam_role.aws_lb_controller
-  ]
-}
-
+# ----------------------
+# AWS EBS CSI Driver
+# ----------------------
 resource "helm_release" "ebs_csi" {
   name       = "aws-ebs-csi-driver"
   repository = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
@@ -90,12 +111,18 @@ resource "helm_release" "ebs_csi" {
     }
   })]
 
+  wait    = true
+  timeout = 600
+
   depends_on = [
     data.terraform_remote_state.cluster,
     aws_iam_role.ebs_csi
   ]
 }
 
+# ----------------------
+# Metrics Server
+# ----------------------
 resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
@@ -108,11 +135,10 @@ resource "helm_release" "metrics_server" {
     ]
   })]
 
+  wait    = true
+  timeout = 300
+
   depends_on = [
     data.terraform_remote_state.cluster
   ]
 }
-
-
-
-
