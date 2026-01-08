@@ -42,8 +42,11 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Terraform Plan - Cluster
+        run: terraform plan -var-file=terraform.tfvars
+
       - name: Terraform Apply - Cluster
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
   deploy-bootstrap-core:
@@ -84,8 +87,11 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Terraform Plan - Bootstrap Core
+        run: terraform plan -var-file=terraform.tfvars
+
       - name: Terraform Apply - Bootstrap Core
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
   deploy-bootstrap-addons:
@@ -126,5 +132,23 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Terraform Plan - Bootstrap Addons
+        run: terraform plan -var-file=terraform.tfvars
+
+      - name: Wait for External Secrets CRDs
+        run: |
+          echo "Waiting for External Secrets CRDs to be available..."
+          for i in {1..30}; do
+            if kubectl get crd secretstores.external-secrets.io >/dev/null 2>&1 && \
+               kubectl get crd externalsecrets.external-secrets.io >/dev/null 2>&1; then
+              echo "External Secrets CRDs are available!"
+              exit 0
+            fi
+            echo "Attempt $i/30: CRDs not ready yet, waiting 5 seconds..."
+            sleep 5
+          done
+          echo "Timeout waiting for External Secrets CRDs"
+          exit 1
+
       - name: Terraform Apply - Bootstrap Addons
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file=terraform.tfvars

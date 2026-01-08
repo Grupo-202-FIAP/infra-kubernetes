@@ -20,3 +20,6 @@ data "aws_eks_cluster_auth" "this" {
   name = data.terraform_remote_state.cluster.outputs.cluster_name
 }
 
+
+
+
