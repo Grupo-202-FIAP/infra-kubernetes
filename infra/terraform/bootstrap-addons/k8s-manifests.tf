@@ -9,7 +9,6 @@ resource "kubernetes_namespace" "datadog" {
   ]
 }
 
-# SecretStore namespaced - usa o ServiceAccount criado pelo External Secrets Operator
 resource "kubernetes_manifest" "datadog_secretstore" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
@@ -25,11 +24,11 @@ resource "kubernetes_manifest" "datadog_secretstore" {
         aws = {
           service = "ParameterStore"
           region  = var.region
+
           auth = {
             jwt = {
               serviceAccountRef = {
-                name      = "external-secrets-sa"
-                namespace = "external-secrets"
+                name = "external-secrets-sa"
               }
             }
           }
@@ -39,8 +38,7 @@ resource "kubernetes_manifest" "datadog_secretstore" {
   }
 
   depends_on = [
-    kubernetes_namespace.datadog,
-    data.terraform_remote_state.bootstrap_core
+    kubernetes_namespace.datadog
   ]
 }
 
