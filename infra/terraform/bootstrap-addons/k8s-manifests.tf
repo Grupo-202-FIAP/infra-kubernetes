@@ -1,22 +1,13 @@
-# Cria namespace datadog
-resource "kubernetes_namespace" "datadog" {
-  metadata {
-    name = "datadog"
-  }
-
-  depends_on = [
-    data.terraform_remote_state.bootstrap_core
-  ]
-}
-
-resource "kubernetes_manifest" "datadog_secretstore" {
+# -------------------------------------------------
+# External Secret Store (ClusterSecretStore)
+# -------------------------------------------------
+resource "kubernetes_manifest" "aws_ssm_cluster_secretstore" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
-    kind       = "SecretStore"
+    kind       = "ClusterSecretStore"
 
     metadata = {
-      name      = "aws-ssm"
-      namespace = kubernetes_namespace.datadog.metadata[0].name
+      name = "aws-ssm"
     }
 
     spec = {
@@ -28,7 +19,8 @@ resource "kubernetes_manifest" "datadog_secretstore" {
           auth = {
             jwt = {
               serviceAccountRef = {
-                name = "external-secrets-sa"
+                name      = "external-secrets-sa"
+                namespace = "external-secrets"
               }
             }
           }
@@ -38,11 +30,13 @@ resource "kubernetes_manifest" "datadog_secretstore" {
   }
 
   depends_on = [
-    kubernetes_namespace.datadog
+    data.terraform_remote_state.bootstrap_core
   ]
 }
 
-# ExternalSecret que vai buscar secrets do SecretStore
+# -------------------------------------------------
+# External Secret para Datadog API Key
+# -------------------------------------------------
 resource "kubernetes_manifest" "datadog_external_secret" {
   manifest = {
     apiVersion = "external-secrets.io/v1beta1"
@@ -50,19 +44,22 @@ resource "kubernetes_manifest" "datadog_external_secret" {
 
     metadata = {
       name      = "datadog-api-key"
-      namespace = kubernetes_namespace.datadog.metadata[0].name
+      namespace = "default"        # <-- mudou de datadog para default
     }
 
     spec = {
       refreshInterval = "1h"
+
       secretStoreRef = {
-        name = kubernetes_manifest.datadog_secretstore.manifest.metadata.name
-        kind = "SecretStore"
+        name = "aws-ssm"
+        kind = "ClusterSecretStore"
       }
+
       target = {
         name           = "datadog-secret"
         creationPolicy = "Owner"
       }
+
       data = [
         {
           secretKey = "api-key"
@@ -75,12 +72,13 @@ resource "kubernetes_manifest" "datadog_external_secret" {
   }
 
   depends_on = [
-    kubernetes_manifest.datadog_secretstore,
-    data.terraform_remote_state.bootstrap_core
+    kubernetes_manifest.aws_ssm_cluster_secretstore
   ]
 }
 
-
+# -------------------------------------------------
+# LimitRange para default
+# -------------------------------------------------
 resource "kubernetes_manifest" "limit_range" {
   manifest = {
     apiVersion = "v1"
@@ -111,6 +109,9 @@ resource "kubernetes_manifest" "limit_range" {
   ]
 }
 
+# -------------------------------------------------
+# ResourceQuota para default
+# -------------------------------------------------
 resource "kubernetes_manifest" "resource_quota" {
   manifest = {
     apiVersion = "v1"
@@ -133,4 +134,3 @@ resource "kubernetes_manifest" "resource_quota" {
     data.terraform_remote_state.cluster
   ]
 }
-

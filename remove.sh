@@ -1,101 +1,58 @@
-#!/bin/bash
-set -e
+$ClusterName = "nextime-cluster"
+$Region = "us-east-1"
 
-CLUSTER_NAME="nextime-cluster"
-REGION="us-east-1"
+Write-Output "==== 1. Listando Node Groups do cluster ===="
+$NodeGroups = (aws eks list-nodegroups --cluster-name $ClusterName --region $Region | ConvertFrom-Json).nodegroups
 
-echo "======================================"
-echo "🔥 DESTRUINDO EKS COMPLETO"
-echo "Cluster: $CLUSTER_NAME"
-echo "Região:  $REGION"
-echo "======================================"
+if ($NodeGroups.Count -gt 0) {
+    Write-Output "==== 2. Deletando Node Groups ===="
+    foreach ($NG in $NodeGroups) {
+        Write-Output "Deletando Node Group: $NG"
+        aws eks delete-nodegroup --cluster-name $ClusterName --nodegroup-name $NG --region $Region
+    }
 
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    Write-Output "Aguardando Node Groups serem deletados..."
+    foreach ($NG in $NodeGroups) {
+        aws eks wait nodegroup-deleted --cluster-name $ClusterName --nodegroup-name $NG --region $Region
+    }
+} else {
+    Write-Output "Nenhum Node Group encontrado"
+}
 
-echo "➡️ Atualizando kubeconfig (se existir)..."
-aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION || true
+Write-Output "==== 3. Deletando Load Balancers criados pelo cluster ===="
+$LBs = (aws elbv2 describe-load-balancers --region $Region | ConvertFrom-Json).LoadBalancers | Where-Object { $_.DNSName -like "*$ClusterName*" }
 
-echo "➡️ Removendo Helm releases..."
-helm uninstall argocd -n argocd || true
-helm uninstall metrics-server -n kube-system || true
-helm uninstall aws-load-balancer-controller -n kube-system || true
-helm uninstall aws-ebs-csi-driver -n kube-system || true
-helm uninstall external-secrets -n external-secrets || true
+foreach ($LB in $LBs) {
+    Write-Output "Deletando Load Balancer: $($LB.LoadBalancerArn)"
+    aws elbv2 delete-load-balancer --load-balancer-arn $LB.LoadBalancerArn --region $Region
+}
 
-echo "➡️ Removendo namespaces..."
-kubectl delete namespace argocd --wait=false || true
-kubectl delete namespace external-secrets --wait=false || true
-kubectl delete namespace datadog --wait=false || true
+Write-Output "==== 4. Deletando Security Groups do cluster ===="
+$SGs = (aws ec2 describe-security-groups --filters "Name=tag:eks:cluster-name,Values=$ClusterName" --region $Region | ConvertFrom-Json).SecurityGroups
 
-sleep 20
+foreach ($SG in $SGs) {
+    $SGId = $SG.GroupId
+    Write-Output "Liberando ENIs associadas ao SG $SGId..."
+    $ENIs = (aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SGId" --region $Region | ConvertFrom-Json).NetworkInterfaces
+    foreach ($ENI in $ENIs) {
+        $AttachId = $ENI.Attachment.AttachmentId
+        if ($AttachId) {
+            Write-Output "Desanexando ENI $($ENI.NetworkInterfaceId)"
+            aws ec2 detach-network-interface --attachment-id $AttachId --force --region $Region
+        }
+    }
 
-echo "➡️ Removendo CRDs External Secrets..."
-kubectl delete crd \
-  secretstores.external-secrets.io \
-  clustersecretstores.external-secrets.io \
-  externalsecrets.external-secrets.io || true
+    Write-Output "Deletando SG $SGId"
+    try {
+        aws ec2 delete-security-group --group-id $SGId --region $Region
+    } catch {
+        Write-Output "Não foi possível deletar SG $SGId ainda"
+    }
+}
 
-echo "======================================"
-echo "🧨 DELETANDO NODE GROUPS"
-echo "======================================"
+Write-Output "==== 5. Deletando o Cluster EKS ===="
+aws eks delete-cluster --name $ClusterName --region $Region
+Write-Output "Aguardando cluster ser deletado..."
+aws eks wait cluster-deleted --name $ClusterName --region $Region
 
-NODEGROUPS=$(aws eks list-nodegroups \
-  --cluster-name $CLUSTER_NAME \
-  --region $REGION \
-  --query "nodegroups[]" \
-  --output text || true)
-
-for NG in $NODEGROUPS; do
-  echo "➡️ Deletando node group: $NG"
-  aws eks delete-nodegroup \
-    --cluster-name $CLUSTER_NAME \
-    --nodegroup-name $NG \
-    --region $REGION || true
-done
-
-echo "➡️ Aguardando node groups serem removidos..."
-sleep 60
-
-echo "======================================"
-echo "🔥 DELETANDO CLUSTER EKS"
-echo "======================================"
-
-aws eks delete-cluster \
-  --name $CLUSTER_NAME \
-  --region $REGION || true
-
-echo "➡️ Aguardando cluster ser removido..."
-sleep 90
-
-echo "======================================"
-echo "🧹 LIMPANDO IAM (IRSA)"
-echo "======================================"
-
-aws iam detach-role-policy \
-  --role-name external-secrets-role \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/external-secrets-ssm || true
-
-aws iam detach-role-policy \
-  --role-name aws-lb-controller-role \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/aws-load-balancer-controller || true
-
-aws iam detach-role-policy \
-  --role-name ebs-csi-role \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy || true
-
-aws iam delete-role external-secrets-role || true
-aws iam delete-role aws-lb-controller-role || true
-aws iam delete-role ebs-csi-role || true
-
-aws iam delete-policy \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/external-secrets-ssm || true
-
-aws iam delete-policy \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/aws-load-balancer-controller || true
-
-echo "======================================"
-echo "✅ EKS COMPLETAMENTE REMOVIDO"
-echo "Agora rode o Terraform do zero:"
-echo ""
-echo "terraform apply"
-echo "======================================"
+Write-Output "==== Tudo deletado com sucesso ===="

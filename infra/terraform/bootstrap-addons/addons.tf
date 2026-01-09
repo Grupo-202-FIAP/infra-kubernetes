@@ -1,10 +1,12 @@
 resource "helm_release" "datadog" {
   name       = "datadog"
-  namespace  = "datadog"
+  namespace  = "default"
   repository = "https://helm.datadoghq.com"
   chart      = "datadog"
 
   create_namespace = false
+  timeout          = 600
+  wait             = true
 
   set {
     name  = "datadog.apiKeyExistingSecret"
@@ -17,7 +19,6 @@ resource "helm_release" "datadog" {
   }
 
   depends_on = [
-    kubernetes_namespace.datadog,
     kubernetes_manifest.datadog_external_secret,
     data.terraform_remote_state.bootstrap_core
   ]
