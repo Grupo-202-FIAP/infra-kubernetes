@@ -8,13 +8,11 @@ resource "helm_release" "datadog" {
   timeout          = 600
   wait             = true
 
-  # API KEY (External Secret)
   set {
     name  = "datadog.apiKeyExistingSecret"
     value = "datadog-secret"
   }
 
-  # Nome do cluster
   set {
     name  = "datadog.clusterName"
     value = data.terraform_remote_state.cluster.outputs.cluster_name
@@ -25,9 +23,7 @@ resource "helm_release" "datadog" {
     value = "datadoghq.com"
   }
 
-  # -----------------------------
   # Logs
-  # -----------------------------
   set {
     name  = "datadog.logs.enabled"
     value = "true"
@@ -38,37 +34,46 @@ resource "helm_release" "datadog" {
     value = "true"
   }
 
-  # -----------------------------
   # APM
-  # -----------------------------
   set {
     name  = "datadog.apm.enabled"
     value = "true"
   }
 
-  # -----------------------------
-  # Kubernetes metrics (KSM)
-  # -----------------------------
+  # K8s Metrics
   set {
     name  = "datadog.kubeStateMetricsEnabled"
     value = "true"
   }
 
-  # -----------------------------
   # Process Agent
-  # -----------------------------
   set {
     name  = "datadog.processAgent.enabled"
     value = "true"
   }
 
+  # Resources
   set {
-    name  = "datadog.admissionController.enabled"
-    value = "true"
+    name  = "agents.resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "agents.resources.requests.memory"
+    value = "200Mi"
+  }
+
+  set {
+    name  = "clusterAgent.resources.requests.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "clusterAgent.resources.requests.memory"
+    value = "256Mi"
   }
 
   depends_on = [
-    kubernetes_manifest.datadog_external_secret,
-    data.terraform_remote_state.bootstrap_core
+    kubernetes_manifest.datadog_external_secret
   ]
 }
