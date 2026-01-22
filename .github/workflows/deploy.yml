@@ -2,7 +2,10 @@ name: Deploy Infra Kubernetes (EKS + Bootstrap)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
+      - homol
 
 permissions:
   id-token: write
@@ -46,6 +49,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Terraform Apply - Cluster
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
@@ -73,9 +77,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup kubectl
+        if: github.ref == 'refs/heads/main'
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubeconfig
+        if: github.ref == 'refs/heads/main'
         run: |
           aws eks update-kubeconfig \
             --name $CLUSTER_NAME \
@@ -91,6 +97,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Terraform Apply - Bootstrap Core
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
@@ -118,9 +125,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup kubectl
+        if: github.ref == 'refs/heads/main'
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubeconfig
+        if: github.ref == 'refs/heads/main'
         run: |
           aws eks update-kubeconfig \
             --name $CLUSTER_NAME \
@@ -136,6 +145,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Wait for External Secrets CRDs
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "Waiting for External Secrets CRDs to be available..."
           for i in {1..30}; do
@@ -144,11 +154,10 @@ jobs:
               echo "External Secrets CRDs are available!"
               exit 0
             fi
-            echo "Attempt $i/30: CRDs not ready yet, waiting 5 seconds..."
             sleep 5
           done
-          echo "Timeout waiting for External Secrets CRDs"
           exit 1
 
       - name: Terraform Apply - Bootstrap Addons
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
