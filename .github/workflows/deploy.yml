@@ -2,7 +2,7 @@ name: Deploy Infra Kubernetes (EKS + Bootstrap)
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ main ]
 
 permissions:
   id-token: write
