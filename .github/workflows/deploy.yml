@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - dev
-      - homol
+      - hom
 
 permissions:
   id-token: write
