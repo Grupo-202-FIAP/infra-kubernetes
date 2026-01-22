@@ -2,7 +2,10 @@ name: Deploy Infra Kubernetes (EKS + Bootstrap)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
+      - homol
 
 permissions:
   id-token: write
@@ -37,7 +40,12 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            terraform init -backend=false
+          else
+            terraform init
+          fi
 
       - name: Terraform Validate
         run: terraform validate
@@ -46,6 +54,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Terraform Apply - Cluster
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
@@ -76,13 +85,19 @@ jobs:
         uses: azure/setup-kubectl@v3
 
       - name: Configure kubeconfig
+        if: github.ref == 'refs/heads/main'
         run: |
           aws eks update-kubeconfig \
             --name $CLUSTER_NAME \
             --region $AWS_REGION
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            terraform init -backend=false
+          else
+            terraform init
+          fi
 
       - name: Terraform Validate
         run: terraform validate
@@ -91,6 +106,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Terraform Apply - Bootstrap Core
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
 
 
@@ -119,15 +135,22 @@ jobs:
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
+        if: github.ref == 'refs/heads/main'
 
       - name: Configure kubeconfig
+        if: github.ref == 'refs/heads/main'
         run: |
           aws eks update-kubeconfig \
             --name $CLUSTER_NAME \
             --region $AWS_REGION
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            terraform init -backend=false
+          else
+            terraform init
+          fi
 
       - name: Terraform Validate
         run: terraform validate
@@ -136,6 +159,7 @@ jobs:
         run: terraform plan -var-file=terraform.tfvars
 
       - name: Wait for External Secrets CRDs
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "Waiting for External Secrets CRDs to be available..."
           for i in {1..30}; do
@@ -151,4 +175,5 @@ jobs:
           exit 1
 
       - name: Terraform Apply - Bootstrap Addons
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
