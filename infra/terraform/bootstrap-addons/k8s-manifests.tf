@@ -122,10 +122,11 @@ resource "kubernetes_manifest" "resource_quota" {
     }
     spec = {
       hard = {
-        "requests.cpu"    = "2"
-        "requests.memory" = "2Gi"
+       "requests.cpu"    = "3500m"
         "limits.cpu"      = "4"
-        "limits.memory"   = "4Gi"
+
+        "requests.memory" = "12Gi"
+        "limits.memory"   = "14Gi"
       }
     }
   }
