@@ -158,6 +158,10 @@ jobs:
           done
           exit 1
 
+      - name: Apply Security Manifests
+        if: github.ref == 'refs/heads/main'
+        run: kubectl apply -f ../../manifests/security
+
       - name: Terraform Apply - Bootstrap Addons
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
